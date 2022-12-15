@@ -1,0 +1,7 @@
+appName: ramez-operator
+ServiceName: ramez-operator-service
+replicaCount: 1
+image:
+  repository: ramezbenaribia/odoo-operator
+  pullPolicy: IfNotPresent
+  tag: "20.0"

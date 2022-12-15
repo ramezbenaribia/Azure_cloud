@@ -1,0 +1,7 @@
+CosmosDB = <sensitive>
+CosmosDB_URI = <sensitive>
+CosmosDB_primary_key = <sensitive>
+Jenkins_server_address = "http://20.216.181.32:8080/login"
+aks_connection = "az aks get-credentials --resource-group RBA_MH_aks_rg --name RBA-MH-cluster"
+key-vault-id = "/subscriptions/b5c0b4f0-0b6b-4273-962b-702041bb1000/resourceGroups/RBA_MH_aks_rg/providers/Microsoft.KeyVault/vaults/rbamhkeyvault"
+key-vault-url = "https://rbamhkeyvault.vault.azure.net/"

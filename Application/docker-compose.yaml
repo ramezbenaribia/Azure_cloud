@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  app:
+    # the line means that the image will be build from the Dockerfile and use it here for this container
+    build: .
+    # if we want to to use our image we can define it like thi line and delete the build line
+    # image: ramezbenaribia/cloudApp:7.0
+    container_name: cloud-app
+
+    # load the .env file so we can use its variables
+    env_file:
+      - .env
+    # the port that will be exposed on 
+    ports:
+      - ${PORT}:${PORT}
+
+
+   
+

@@ -1,0 +1,109 @@
+---
+- name: Wait for ssh connection
+  hosts: all
+  gather_facts: False
+  tasks:
+    - name: Ensure ssh port open
+      wait_for:
+        port: 22
+        delay: 10
+        timeout: 100
+        search_regex: OpenSSH
+        host: "{{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}"
+      vars:
+        ansible_connection: local
+        ansible_python_interpreter: /bin/python3
+
+- name: Install Java and Update OS
+  hosts: all
+  become: yes
+  remote_user: azureuser
+  become_user: root
+
+  tasks:
+    - name: Task - 1 Update APT package manager repositories cache
+      become: true
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+        cache_valid_time: 3600
+    - name: Task -2 Install Java using Ansible
+      become: yes
+      apt:
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - openjdk-11-jdk
+
+- name: Install Jenkins
+  hosts: all
+  become: yes
+  remote_user: azureuser
+  become_user: root
+
+  tasks:
+    - name: ensure the jenkins apt repository key is installed
+      apt_key: url=https://pkg.jenkins.io/debian-stable/jenkins.io.key state=present
+      become: yes
+
+    - name: ensure the repository is configured
+      apt_repository: repo='deb https://pkg.jenkins.io/debian-stable binary/' state=present
+      become: yes
+
+    - name: ensure jenkins is installed
+      apt:
+        name: jenkins
+        update_cache: yes
+        install_recommends: no
+      become: yes
+
+    - name: ensure jenkins is running
+      service:
+        name: jenkins
+        state: started
+
+    - name: read admin pwd
+      shell: cat /var/lib/jenkins/secrets/initialAdminPassword
+      register: adminpwd
+
+    - name: unlock and add admin user
+      jenkins_script:
+        script: |
+          import jenkins.model.*
+          import hudson.security.*
+          def instance = Jenkins.getInstance()
+          def hudsonRealm = new HudsonPrivateSecurityRealm(false)
+          hudsonRealm.createAccount('${user_name}', '${user_pwd}')
+          instance.setSecurityRealm(hudsonRealm)
+          def strategy = new FullControlOnceLoggedInAuthorizationStrategy()
+          strategy.setAllowAnonymousRead(false)
+          instance.setAuthorizationStrategy(strategy)
+          instance.save()
+        args:
+          user_name: "{{ admin_user_name }}"
+          user_pwd: "{{ admin_user_pass }}"
+        user: admin
+        password: "{{ adminpwd.stdout }}"
+      vars:
+        admin_user_pass: jenkins
+        admin_user_name: jenkins
+
+    - name: complete setup wizard
+      jenkins_script:
+        script: |
+          import static jenkins.model.Jenkins.instance as jenkins
+          import jenkins.install.InstallState
+          if (!jenkins.installState.isSetupComplete()) {
+            InstallState.INITIAL_SETUP_COMPLETED.initializeState()
+          }
+        user: admin
+        password: "{{ adminpwd.stdout }}"
+
+    # - name: install plugin
+    #   jenkins_plugin:
+    #     name: "{{ item }}"
+    #     state: latest
+    #     url_username: admin
+    #     url_password: "{{ adminpwd.stdout }}"
+    #   with_items: "{{ jenkins_plugins }}"
